@@ -37,7 +37,7 @@ class log_sheet(nowo.port_base):
 
 
     def Init(self,  Values = [], Gui_For_Data  = None):
-        with self.info: print(self.name, 'init')
+        #with self.info: print(self.name, 'init')
         super().Init(Values, Gui_For_Data)
         for name in self.buffer_data.keys():
             split_name = name.split('.', 1)
@@ -53,15 +53,15 @@ class log_sheet(nowo.port_base):
     def ready_for_end(self):
         super().ready_for_end()
         # self.log_data = pd.DataFrame(dict([ (k,pd.Series(v)) for k,v in self.buffer_data.items() ]))
-        with self.info: print(self.name, 'ready')
+        #with self.info: print(self.name, 'ready')
         for col_name in self.sheet_colnames:
             for row_name in self.sheet_rownames:
                 key_name = col_name + '.' + row_name
                 value = self.buffer_data[key_name]
                 self.sheet_data.at[row_name, col_name] = value
-        self.sheet_data.to_clipboard()
+        #self.sheet_data.to_clipboard()
         if self.Gui_For_Data:
-            with self.info: print(self.Gui_For_Data.name, 'ready_2')
+            #with self.info: print(self.Gui_For_Data.name, 'ready_2')
             self.Gui_For_Data.ready_for_end()
 
 
