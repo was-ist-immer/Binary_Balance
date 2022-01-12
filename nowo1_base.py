@@ -383,8 +383,8 @@ class step_base():
     def on_start_clicked(self, args):
         parent = args.parent
         parent.reset()
-        #with self.info:
-          #  print('Hier')
+        with self.info:
+            print('Hier')
        
         # for obj in parent.work_objs:
         #     if obj._GUI_is_visible:

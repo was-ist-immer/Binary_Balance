@@ -6,7 +6,3 @@
 
 
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/was-ist-immer/Binary_Balance/HEAD?urlpath=voila%2Frender%2FBalance_Binary.ipynb)
-
-## Run Jupyterlab
-
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/was-ist-immer/Binary_Balance/HEAD?urlpath=lab%2tree%2FBalance_Binary.ipynb)
