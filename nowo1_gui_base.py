@@ -22,13 +22,19 @@ class gui_ipysheet(nowo.gui_base):
 
 
     def Init_by_dataframe(self, dataframe):
+        with self.info: print(self.name, 'Init_by')
         self.sheet_data = dataframe
         self.sheet_colnames = list(self.sheet_data.head())
         self.sheet_rownames = list(self.sheet_data.index.tolist())
 
 
     def ready_for_end(self):
+        with self.info: print(self.name, 'ready_1')
         buffer = self.sheet_data.values.T.tolist()
+        # self.sheet.cells = (ipysheet.Cell(
+        #     column_end=0, column_start=1, row_end=1, row_start=1, type='text', value='Hello'), 
+        #     ipysheet.Cell(column_end=0, column_start=0, row_end=0, row_start=0, type='text', value='Hello'))
+
         ipysheet.cell_range(buffer[0], column_start=1)
        # self.dataframe_out = ipysheet.to_dataframe(self.sheet)
         #self.sheet_data.to_clipboard()

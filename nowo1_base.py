@@ -384,7 +384,7 @@ class step_base():
         parent = args.parent
         parent.reset()
         with self.info:
-            print('Hier')
+            print('on click')
        
         # for obj in parent.work_objs:
         #     if obj._GUI_is_visible:
@@ -444,6 +444,7 @@ class step_base():
             logger.ready_for_start(self)
 
         if self._GUI_visible: pass 
+        with self.info: print(logger.name, 'work 1')
         while self.step() == 1:
             self._node_success()
             
@@ -451,6 +452,7 @@ class step_base():
             obj.ready_for_end()
 
         for logger in self._loggerlist:
+            with self.info: print(logger.name, 'work 2')
             logger.ready_for_end()
          
 
@@ -641,8 +643,8 @@ class work_base():
         self._GUI_itemlist : dict = dict()
         self.GUI_Item =  None
         self._GUI_is_visible = False
-
         self.info = widgets.Output()
+        display(self.info)
    
     def Init(self): pass
        
@@ -658,7 +660,6 @@ class work_base():
      
 
     def Show_GUI(self):
-        #display(self.info)
         if not self.GUI_Item:
             self.GUI_Item =  self._create_gui()
         self._GUI_is_visible = True
