@@ -1,3 +1,2 @@
 voila
 voila-gridstack
-ipysheet
