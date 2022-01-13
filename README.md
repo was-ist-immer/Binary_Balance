@@ -14,8 +14,3 @@ Dieses Bild zeigt den Bilanzknoten mit den  extensiven und intensiven Größen
 
 ##### Der folgende  Link startet Jupyterlab auf Binder um das Programm temporär zu verändern (programmieren).
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/was-ist-immer/Binary_Balance/HEAD?urlpath=lab%2Ftree%2FBalance_Binary.ipynb)
-
-
-```python
-
-```
