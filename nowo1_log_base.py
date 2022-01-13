@@ -3,7 +3,7 @@ import nowo1_base as nowo
 import datetime as dt
 import pandas as pd
 import numpy as np
-import nowo1_gui_base 
+import pyperclip
 
 class logger(nowo.port_base):
     def __init__(self, name: str, GUI : bool = False,  **kwargs):
@@ -60,6 +60,9 @@ class log_sheet(nowo.port_base):
                 value = self.buffer_data[key_name]
                 self.sheet_data.at[row_name, col_name] = value
         #self.sheet_data.to_clipboard()
+        csv_str = self.sheet_data.to_csv()
+        pyperclip.copy(csv_str)
+        #copyDF(self.sheet_data)
         if self.Gui_For_Data:
             #with self.info: print(self.Gui_For_Data.name, 'ready_2')
             self.Gui_For_Data.ready_for_end()

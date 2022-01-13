@@ -360,10 +360,32 @@ class gate_dataframe(gate_base):
         self._success_flag = False
 
 
+class gui_api():
+    def __init__(self):
+        self._GUI_visible = True
+        self._GUI_itemlist : dict = dict()
+        self.GUI_Item =  None
+        self._GUI_is_visible = False
+        self.info = widgets.Output()
+
+
+    def Show_GUI(self):
+        if not self.GUI_Item:
+            self.GUI_Item =  self._create_gui()
+        self._GUI_is_visible = True
+        display(self.GUI_Item)
+            
+
+    def _create_gui(self):
+        for widget in self._GUI_itemlist.values():
+            setattr(widget, 'parent', self)
+        return None    
+
 
 #*****************************************************************
-class step_base():
+class step_base(gui_api):
     def __init__(self, name : str,  GUI : bool = False):
+        super().__init__()
         self.name = name
         self.step_nr: int = 0
         self.total_steps: int = 0
@@ -371,41 +393,35 @@ class step_base():
         self.sim_funcs : dict = {}# Ersetzt self.work_objs und self.work_funcs
         self._loggerlist : set = set() 
         
-        self._GUI_visible = GUI
-        self._GUI_itemlist : dict = dict()
-        self.GUI_Item =  self._create_gui()
-        self._GUI_is_visible = False
+        # self._GUI_visible = GUI
+        # self._GUI_itemlist : dict = dict()
+        # self.GUI_Item =  self._create_gui()
+        # self._GUI_is_visible = False
 
-        self.info = widgets.Output()
+        # self.info = widgets.Output()
 
 
 
     def on_start_clicked(self, args):
         parent = args.parent
         parent.reset()
-        #with self.info:print('on click')
-       
-        # for obj in parent.work_objs:
-        #     if obj._GUI_is_visible:
-        #         obj.Init_Over_GUI()
         parent.work()
       
 
-    def Show_GUI(self):
-        for obj in self.work_objs:
-            if obj._GUI_visible:
-                obj.Show_GUI()
-        if self.GUI_Item:
-            self._GUI_is_visible = True
-            display(self.GUI_Item, self.info)
-            #with self.info:
-            #    print('Na dann wollen wir mal')    
+    # def Show_GUI(self, show = True):
+    #     for obj in self.work_objs:
+    #         if obj._GUI_visible:
+    #             obj.Show_GUI()
+    #     super().Show_GUI()
+        # if self.GUI_Item:
+        #     self._GUI_is_visible = True
+        #     display(self.GUI_Item)
+            
 
-
-    def _create_gui(self):
-        for widget in self._GUI_itemlist.values():
-            setattr(widget, 'parent', self)
-        return None
+    # def _create_gui(self):
+    #     for widget in self._GUI_itemlist.values():
+    #         setattr(widget, 'parent', self)
+    #     return None
      
 
     def reset(self):
@@ -632,50 +648,24 @@ class step_timer(step_base):
 
 
 #*****************************************************************
-class work_base():
+class work_base(gui_api):
     def __init__(self, name: str, GUI : bool = False, **kwargs):
-        
+        super().__init__()
         self.name = name
         self._ctrl_ok : bool = False
-        
-        self._GUI_visible = GUI
-        self._GUI_itemlist : dict = dict()
-        self.GUI_Item =  None
-        self._GUI_is_visible = False
-        self.info = widgets.Output()
-        #display(self.info)
    
     def Init(self): pass
        
-    def ready_for_start(self, timer: step_timer): pass
+    def ready_for_start(self, stepper: step_base): pass
        
     def ready_for_end(self):pass
 
-
-    def _create_gui(self):
-        for widget in self._GUI_itemlist.values():
-            setattr(self, 'parent', widget)
-        return None
-     
-
-    def Show_GUI(self):
-        if not self.GUI_Item:
-            self.GUI_Item =  self._create_gui()
-        self._GUI_is_visible = True
-        display(self.GUI_Item)
 
 
 class gui_base(work_base):
     def __init__(self, name: str, GUI : bool = False,  **kwargs):
         super().__init__(name, GUI, **kwargs)
-       
-
-    def ready_for_start(self, stepper: step_base):pass
-    
-    def ready_for_end(self):pass
-        
-    def Init(self): super().Init()
-       
+          
     def Init_by_dataframe(self, dataframe): pass
 
 
