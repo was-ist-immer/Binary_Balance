@@ -9,19 +9,20 @@ from IPython.display import display
 
 
 class binary_node(nowo.sim_base):
-    def __init__(self, name: str, **kwargs):
+    def __init__(self, name: str, 
+                init_methode :  str = 'normal', **kwargs):
         kwargs.update({'ch_type' : nowo.gate_general})   
-        super().__init__(name, **kwargs)
+        super().__init__(name, init_methode, **kwargs)
         self.Gate_A = nowo.gate_general('Gate_A', self)
         self.Gate_B = nowo.gate_general('Gate_B', self)
-        self.Gate_A_B = nowo.gate_general('Gate_A_B', self)
+        self.Gate_C = nowo.gate_general('Gate_C', self)
 
         self.A_ratio = nowo.sim_value('A_ratio', self, (float, int,)) 
         self.B_ratio = nowo.sim_value('B_ratio', self, (float, int,)) 
         self.A_portion = nowo.sim_value('A_portion', self, (float, int,)) 
         self.B_portion = nowo.sim_value('B_portion', self, (float, int,)) 
         
-        self.Info = nowo.sim_value('Info', self, (str,)) 
+        #self.Info = nowo.sim_value('Info', self, (str,)) 
 
         self.calcflag : bool = True
         self._value_key : np.byte = 0b00000000
@@ -34,7 +35,7 @@ class binary_node(nowo.sim_base):
         self._value_keys : dict = {
             'A' :       0b01000000,
             'B' :       0b00100000,
-            'A_B':      0b00010000,
+            'C':      0b00010000,
             'A_ratio':  0b00001000,
             'B_ratio':  0b00000100,
             'A_portion':0b00000010,
@@ -44,45 +45,65 @@ class binary_node(nowo.sim_base):
         self._funcgate.update({
                 self.Calc_A : self.Gate_A,
                 self.Calc_B : self.Gate_B,
-                self.Calc_A_B : self.Gate_A_B
+                self.Calc_C : self.Gate_C
                 })
 
 
+    def _sync_fullname(self):
+        self.Gate_A.general._get_fullname()
+        self.Gate_B.general._get_fullname()
+        self.Gate_C.general._get_fullname()
+        self.A_ratio._get_fullname()
+        self.B_ratio._get_fullname()
+        self.A_portion._get_fullname()
+        self.B_portion._get_fullname()
+        super()._sync_fullname()
+      
+
+
     def _create_gui(self):
-        options =[('Strom A', 'A'), 
-             ('Strom B', 'B'), 
-             ('Summe A und B', 'A_B'),
-             ('Verhältnis A', 'A_ratio'), 
-             ('Verhältnis B', 'B_ratio'), 
-             ('Anteil A', 'A_portion'),
-             ('Anteil B', 'B_portion')
+       # if self._GUI_is_create: return
+        options =[
+            (self.Gate_A.alias_name + '.' + self.Gate_A.general.alias_name, 'A'),
+            (self.Gate_B.alias_name + '.' + self.Gate_B.general.alias_name, 'B'),
+            (self.Gate_C.alias_name + '.' + self.Gate_C.general.alias_name, 'C'),
+            (self.A_ratio.alias_name, 'A_ratio'),
+            (self.B_ratio.alias_name, 'B_ratio'),
+            (self.A_portion.alias_name, 'A_portion'),
+            (self.B_portion.alias_name, 'B_portion'),
             ]
 
-        layout_select = widgets.Layout(width='100%')
-        layout_valbox = widgets.Layout(padding = '1em 0  0  0', background_color='red')
-        
-        val_label_1 = widgets.Label(value='extensive Größe:')
+
+        layout_select = widgets.Layout()
+        layout_valbox = widgets.Layout(padding = '1em 0  0  0')
+        style_label = widgets.Layout(width = '100px')
+
+        val_label_1 = widgets.HTML(
+            value='extensive Größe:',
+            layout = style_label
+        )
+
         val_select_1 = widgets.Dropdown(options = options[:3], 
             value='A',  
-            #description='Extensive Größe:',
             layout = layout_select
         )
-        value_1 = widgets.FloatText(value = 0.0, layout=widgets.Layout(width='15%'))
 
-        val_label_2 = widgets.Label(value='extensive oder intensive Größe')
+        value_1 = widgets.FloatText(value = 1.0)
+        val1_box = widgets.HBox([val_label_1, widgets.VBox([val_select_1, value_1])])
+
+
+        val_label_2 = widgets.HTML(
+            value='extensive oder <br> intensive Größe',
+            layout = style_label
+        )
         val_select_2 = widgets.Dropdown(options = options, 
-            value='B',  
-            #description='extensive oder intensive Größe:',
+            value='B', 
             layout = layout_select) 
-        value_2 = widgets.FloatText(value = 0.0, layout=widgets.Layout(width='15%'))    
+        value_2 = widgets.FloatText(value = 1.0)    
         
-        val1_box = widgets.VBox([val_label_1, widgets.HBox([val_select_1, value_1])],
-                background_color='red')
-        val2_box = widgets.VBox([val_label_2, widgets.HBox([val_select_2, value_2])], layout = layout_valbox)
+       
+        val2_box = widgets.HBox([val_label_2, widgets.VBox([val_select_2, value_2])], layout = layout_valbox)
       
-        
-        total_box = widgets.VBox([val1_box, val2_box], background_color='red')
-
         self._GUI_itemlist.update({
             'val_select_1' : val_select_1,
             'value_1' : value_1,
@@ -90,51 +111,58 @@ class binary_node(nowo.sim_base):
             'value_2' : value_2,
         })
         super()._create_gui()# Attention! --must-- because the widget get a parent attr.
-        return  total_box
+        
+        self.total_box.children = (val1_box, val2_box, *self.total_box.children)
+        self.total_box.layout.width = '60%'
      
 
-    def  Init_Over_GUI(self):
+
+    def  Init_By_GUI(self):
+      
+        super().Init_By_GUI()
         para = {
            self._GUI_itemlist['val_select_1'].value :  self._GUI_itemlist['value_1'].value,
            self._GUI_itemlist['val_select_2'].value :  self._GUI_itemlist['value_2'].value
         }
+     
         self.Init(**para)
         
     
+
     def Init(self, 
             A = np.nan,
             B = np.nan,
-            A_B = np.nan,
+            C = np.nan,
             A_ratio = np.nan,
             B_ratio = np.nan,
             A_portion = np.nan,
             B_portion = np.nan,
         ):
-
-        super().Init()
+       
+        super().Init(para_from_Init = locals())
         self._value_key  = 0b00000000
         self.Gate_A.general.Init(A)
         self.Gate_B.general.Init(B)
-        self.Gate_A_B.general.Init(A_B)
+        self.Gate_C.general.Init(C)
         self.A_ratio.Init(A_ratio)
         self.B_ratio.Init(B_ratio)
         self.A_portion.Init(A_portion)
         self.B_portion.Init(B_portion)
-        self.Info.Init('kein Kommentar')
-        self.Info._value = 'Oh mann'
+        #self.Info.Init('kein Kommentar')
+        #self.Info._value = 'Oh mann'
 
 
     def _set_values(self):
        if not self._korr_key & 0b01000000: self.A = np.nan
        if not self._korr_key & 0b00100000: self.B = np.nan
-       if not self._korr_key & 0b00010000: self.A_B = np.nan
+       if not self._korr_key & 0b00010000: self.C = np.nan
        if not self._korr_key & 0b00001000: self.A_ratio = np.nan
        if not self._korr_key & 0b00000100: self.B_ratio = np.nan
        if not self._korr_key & 0b00000010: self.A_portion = np.nan
        if not self._korr_key & 0b00000001: self.B_portion = np.nan
 
 
-    # es muss mindestens ein  A oder B oder A_B vorhanden sein aber nicht mehr wie zwei
+    # es muss mindestens ein  A oder B oder C vorhanden sein aber nicht mehr wie zwei
     def _check_values(self, stepper : nowo.step_base):
         # Build zahl bei values 
         count : int = 0
@@ -144,8 +172,8 @@ class binary_node(nowo.sim_base):
         if not np.isnan(self.Gate_B.general.get_set(stepper)): 
             self._value_key = self._value_key   |self._value_keys['B']
             count = count + 1
-        if not np.isnan(self.Gate_A_B.general.get_set(stepper)): 
-            self._value_key = self._value_key   |self._value_keys['A_B']
+        if not np.isnan(self.Gate_C.general.get_set(stepper)): 
+            self._value_key = self._value_key   |self._value_keys['C']
             count = count + 1
         if not np.isnan(self.A_ratio.get_set(stepper)): 
             self._value_key = self._value_key   |self._value_keys['A_ratio']
@@ -161,15 +189,15 @@ class binary_node(nowo.sim_base):
             count = count + 1
 
         if count < 2: 
-            self.Info._value = 'Es müssen mind. 2 unterschiedliche Werte angeben werden'
+           # self.Info._value = 'Es müssen mind. 2 unterschiedliche Werte angeben werden'
             return False
         elif count > 2:
-            self.Info._value = 'Es dürfen nicht mehr als 2 unterschiedliche Werte angeben werden'
+           # self.Info._value = 'Es dürfen nicht mehr als 2 unterschiedliche Werte angeben werden'
             return False
          
         # Abfrage ob wenigstens eine Masse vorhanden ist
         if self._value_key < 16:
-            self.Info._value = 'Es muss min. ein Strom (A, B oder A_B) angegeben werden'
+          #  self.Info._value = 'Es muss min. ein Strom (A, B oder C) angegeben werden'
             return False
         
         return True
@@ -185,9 +213,9 @@ class binary_node(nowo.sim_base):
         return self.Gate_B
 
 
-    def Calc_A_B(self,  stepper : nowo.step_base, Gate_In: nowo.gate_general):
+    def Calc_C(self,  stepper : nowo.step_base, Gate_In: nowo.gate_general):
         self._calc(stepper, Gate_In)
-        return self.Gate_A_B
+        return self.Gate_C
 
 
     def _calc(self,  stepper : nowo.step_base, Gate_In: nowo.gate_general):
@@ -201,7 +229,7 @@ class binary_node(nowo.sim_base):
             self._calc_B_portion()
             self._calc_A()
             self._calc_B()  
-            self._calc_A_B()        
+            self._calc_C()        
           
 
     def _set_calcflag(self, flag):
@@ -225,11 +253,11 @@ class binary_node(nowo.sim_base):
             elif  self._value_keys['A'] & self._value_key and self._value_keys['B'] & self._value_key:     
                 self.A_ratio._value = self.Gate_A.general._value / self.Gate_B.general._value  
             
-            elif  self._value_keys['A_B'] & self._value_key and self._value_keys['A'] & self._value_key:
-                self.A_ratio._value = self.Gate_A.general._value / (self.Gate_A_B.general._value - self.Gate_A.general._value)
+            elif  self._value_keys['C'] & self._value_key and self._value_keys['A'] & self._value_key:
+                self.A_ratio._value = self.Gate_A.general._value / (self.Gate_C.general._value - self.Gate_A.general._value)
             
-            elif  self._value_keys['A_B'] & self._value_key and  self._value_keys['B'] & self._value_key:
-                self.A_ratio._value = (self.Gate_A_B.general._value - self.Gate_B.general._value) / self.B
+            elif  self._value_keys['C'] & self._value_key and  self._value_keys['B'] & self._value_key:
+                self.A_ratio._value = (self.Gate_C.general._value - self.Gate_B.general._value) / self.B
             
             else: 
                 self._set_calcflag(False)
@@ -299,11 +327,11 @@ class binary_node(nowo.sim_base):
             elif self._value_keys['A'] & self._value_key and self._value_keys['B'] & self._value_key:
                 self.B_ratio._value = self.Gate_B.general._value / self.Gate_A.general._value
                 
-            elif self._value_keys['A_B'] & self._value_key and self._value_keys['B'] & self._value_key:
-                self.B_ratio._value = self.Gate_B.general._value / (self.Gate_A_B.general._value - self.Gate_B.general._value)
+            elif self._value_keys['C'] & self._value_key and self._value_keys['B'] & self._value_key:
+                self.B_ratio._value = self.Gate_B.general._value / (self.Gate_C.general._value - self.Gate_B.general._value)
                 
-            elif self._value_keys['A_B'] & self._value_key and self._value_keys['A'] & self._value_key:
-                self.B_ratio._value = (self.Gate_A_B.general._value - self.Gate_A.general._value) / self.Gate_A.general._value
+            elif self._value_keys['C'] & self._value_key and self._value_keys['A'] & self._value_key:
+                self.B_ratio._value = (self.Gate_C.general._value - self.Gate_A.general._value) / self.Gate_A.general._value
             else: 
                 self._set_calcflag(False)
                 return   
@@ -323,14 +351,14 @@ class binary_node(nowo.sim_base):
             return
 
         try:
-            if self._value_keys['A_B'] & self._value_key and self._value_keys['B'] & self._value_key:
-                self.Gate_A.general._value = (self.Gate_A_B.general._value - self.B)
+            if self._value_keys['C'] & self._value_key and self._value_keys['B'] & self._value_key:
+                self.Gate_A.general._value = (self.Gate_C.general._value - self.Gate_B.general._value)
                 
-            elif self._value_keys['A_B'] & self._value_key and self._value_keys['A_portion'] & self._value_key:
-                self.Gate_A.general._value = (self.Gate_A_B.general._value * self.A_portion._value)
+            elif self._value_keys['C'] & self._value_key and self._value_keys['A_portion'] & self._value_key:
+                self.Gate_A.general._value = (self.Gate_C.general._value * self.A_portion._value)
                 
-            elif self._value_keys['A_B'] & self._value_key and self._value_keys['A_ratio'] & self._value_key:
-                self.Gate_A.general._value = (self.Gate_A_B.general._value * self.A_portion._value)
+            elif self._value_keys['C'] & self._value_key and self._value_keys['A_ratio'] & self._value_key:
+                self.Gate_A.general._value = (self.Gate_C.general._value * self.A_portion._value)
                 
             elif self._value_keys['B'] & self._value_key and self._value_keys['A_ratio'] & self._value_key:
                 self.Gate_A.general._value = (self.Gate_B.general._value * self.A_ratio._value)
@@ -354,10 +382,10 @@ class binary_node(nowo.sim_base):
             return
         
         try:
-            if self._value_keys['A_B'] & self._value_key and self._value_keys['A'] & self._value_key:
-                self.Gate_B.general._value = (self.Gate_A_B.general._value - self.Gate_A.general._value)  
-            elif self._value_keys['A_B'] & self._value_key and self._value_keys['B_portion'] & self._value_key:
-                self.Gate_B.general._value = (self.Gate_A_B.general._value * self.B_portion._value)
+            if self._value_keys['C'] & self._value_key and self._value_keys['A'] & self._value_key:
+                self.Gate_B.general._value = (self.Gate_C.general._value - self.Gate_A.general._value)  
+            elif self._value_keys['C'] & self._value_key and self._value_keys['B_portion'] & self._value_key:
+                self.Gate_B.general._value = (self.Gate_C.general._value * self.B_portion._value)
             elif self._value_keys['A'] & self._value_key and self._value_keys['B_ratio'] & self._value_key:
                 self.Gate_B.general._value = (self.Gate_A.general._value * self.B_ratio._value)
                 
@@ -375,15 +403,15 @@ class binary_node(nowo.sim_base):
     
 
         
-    def _calc_A_B(self):
-        if self._value_keys['A_B'] & self._value_key:
+    def _calc_C(self):
+        if self._value_keys['C'] & self._value_key:
             self._set_calcflag(False)
             return
         
         if self._value_keys['A'] & self._value_key and self._value_keys['B'] & self._value_key:
-            self.Gate_A_B.general._value = (self.Gate_A.general._value + self.Gate_B.general._value)
+            self.Gate_C.general._value = (self.Gate_A.general._value + self.Gate_B.general._value)
             self._set_calcflag(True)
-            self._value_key = self._value_key |  self._value_keys['A_B'] 
+            self._value_key = self._value_key |  self._value_keys['C'] 
             return
         self._set_calcflag(False)    
     
@@ -391,16 +419,16 @@ class binary_node(nowo.sim_base):
     def _reset(self):
         self.Gate_A._reset()
         self.Gate_B._reset()
-        self.Gate_A_B._reset()
+        self.Gate_C._reset()
         super()._reset()
 
     
     def _node_success(self, stepper: nowo.step_base):
         self.Gate_A._node_success(stepper)
         self.Gate_B._node_success(stepper)
-        self.Gate_A_B._node_success(stepper)
+        self.Gate_C._node_success(stepper)
         self.A_ratio._node_success(stepper)
         self.B_ratio._node_success(stepper)
         self.A_portion._node_success(stepper)
         self.B_portion._node_success(stepper)
-        self.Info._node_success(stepper)
+       # self.Info._node_success(stepper)

@@ -1,13 +1,15 @@
 import sim_base as sim_g
 import nowo1_base as nowo
+from nowo1_gui_elements import Download_Button_csv
 import datetime as dt
 import pandas as pd
 import numpy as np
-import pyperclip
+import ipywidgets as widgets
+#import pyperclip
 
 class logger(nowo.port_base):
-    def __init__(self, name: str, GUI : bool = False,  **kwargs):
-        super().__init__(name, GUI, **kwargs)
+    def __init__(self, name: str,  init_methode :  str = 'normal',  **kwargs):
+        super().__init__(name, init_methode, **kwargs)
         self.log_data: pd.DataFrame = pd.DataFrame()
 
     def clear_buffer(self):
@@ -20,15 +22,16 @@ class logger(nowo.port_base):
         
 
 
-# Nimmt nur den ersten Wert und bildet eine Tabelle
-# wird verwendet bei gleichen sim_obj die nur einmal berechnet wurden
+
 class log_sheet(nowo.port_base):
-    def __init__(self, name: str, GUI : bool = False,  **kwargs):
+    def __init__(self, name: str,  init_methode :  str = 'normal',  **kwargs):
         self.log_data: pd.DataFrame = pd.DataFrame()
-        super().__init__(name, GUI, **kwargs)
-        self.sheet_colnames : list = []
+        super().__init__(name, init_methode, **kwargs)
+       
         self.sheet_rownames : list = []
         self.sheet_data: pd.DataFrame = None
+        self.full_data: pd.DataFrame = None
+        self._download_class = Download_Button_csv('sheet_data.csv')
          
     
     def clear_buffer(self):
@@ -36,42 +39,86 @@ class log_sheet(nowo.port_base):
         self.log_data = pd.DataFrame()
 
 
-    def Init(self,  Values = [], Gui_For_Data  = None):
-        #with self.info: print(self.name, 'init')
-        super().Init(Values, Gui_For_Data)
+    def on_clear_clicked(self, args):  
+        #with self.info: print('on_clear_clicked' , self._init_para) 
+        self.sheet_data.drop(self.sheet_data.columns, axis = 1, inplace = True)
+        self.full_data.drop(self.sheet_data.columns, axis = 1, inplace = True)
+
+
+    
+      # Später im Parent
+    def _create_gui(self):
+        clear_button = widgets.Button(description='Löschen')
+        clear_label = widgets.Label(value='Löschen')  
+        clear_button.on_click(self.on_clear_clicked)
+        
+        
+        download_button = self._download_class.button
+        download_label = widgets.Label(value='Download')  
+       
+        
+        #self.total_box = widgets.VBox([clear_label, clear_button, download_label, download_button])
+        self.total_box = widgets.VBox([clear_button, download_button])
+        self._GUI_itemlist.update({
+            'clear_button' : clear_button,
+            'clear_label' : clear_label,
+            'download_button' : download_button,
+            'download_label' : download_label,
+        })
+      
+        super()._create_gui()# Attention! --must-- because the widget get a parent attr.
+        return
+       
+  
+
+    def Init(self,  
+        Values = [], 
+        Gui_For_Data  = None):
+
+        with self.info: print(self.name, 'Init Sheet')
+        super().Init(
+            Values = Values, 
+            Gui_For_Data = Gui_For_Data,
+            para_from_Init = locals())
+        
+        if isinstance(self.sheet_data, pd.DataFrame) : return
         for name in self.buffer_data.keys():
             split_name = name.split('.', 1)
-            if not split_name[0] in self.sheet_colnames:
-                self.sheet_colnames.append(split_name[0])
+          
             if not split_name[1] in self.sheet_rownames:    
                 self.sheet_rownames.append(split_name[1])
-        self.sheet_data = pd.DataFrame(columns = self.sheet_colnames, index = self.sheet_rownames)
+        self.sheet_data = pd.DataFrame(index = self.sheet_rownames)
+        self.full_data  = pd.DataFrame(index = self.sheet_rownames) 
         if self.Gui_For_Data:
             self.Gui_For_Data.Init_by_dataframe(self.sheet_data)
+        
 
 
     def ready_for_end(self):
         super().ready_for_end()
-        # self.log_data = pd.DataFrame(dict([ (k,pd.Series(v)) for k,v in self.buffer_data.items() ]))
-        #with self.info: print(self.name, 'ready')
-        for col_name in self.sheet_colnames:
-            for row_name in self.sheet_rownames:
-                key_name = col_name + '.' + row_name
-                value = self.buffer_data[key_name]
-                self.sheet_data.at[row_name, col_name] = value
-        #self.sheet_data.to_clipboard()
-        csv_str = self.sheet_data.to_csv()
-        pyperclip.copy(csv_str)
-        #copyDF(self.sheet_data)
+        for name, value in self.buffer_data.items():
+            split_name = name.split('.', 1)
+            col_name = split_name[0]
+            if not col_name in self.sheet_data.columns:
+                self.sheet_data[col_name] = ''
+                self.full_data[col_name] = ''
+            #with self.info: 
+             #    print(split_name[1], col_name, value)
+            # TODO Hier wird immer das erste Ausgegeben das sollt variable sein
+            self.sheet_data.at[split_name[1], col_name] = value[0]
+            self.full_data.at[split_name[1], col_name] = value
+        
+        csv_text = self.sheet_data.to_csv(sep = ';')
+        self._download_class.set_button(csv_text)
         if self.Gui_For_Data:
-            #with self.info: print(self.Gui_For_Data.name, 'ready_2')
             self.Gui_For_Data.ready_for_end()
 
 
 
+
 class log_dataframe(nowo.port_base):
-    def __init__(self, name: str, GUI : bool = False,  **kwargs):
-        super().__init__(name, GUI, **kwargs)
+    def __init__(self, name: str,  init_methode :  str = 'normal',  **kwargs):
+        super().__init__(name, init_methode, **kwargs)
         self.log_data: pd.DataFrame = pd.DataFrame()
 
     def clear_buffer(self):

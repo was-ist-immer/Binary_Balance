@@ -1,5 +1,4 @@
 voila
-voila-gridstack
 ipysheet
 pandas
-pyperclip
+markdown 

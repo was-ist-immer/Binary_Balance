@@ -1,4 +1,5 @@
 import sys
+#from types import NoneType
 import sim_base as sim_g
 import pandas as pd
 import datetime as dt
@@ -80,11 +81,16 @@ def analyse_func(func):
 
 
 class sim_value():
-    def __init__(self, name: str, parent, value_type ):
+    def __init__(self, name: str, parent, value_type, alias_name = '' ):
         self.name = name
+        if alias_name:
+            self.alias_name = alias_name 
+        else: self.alias_name = self.name 
+
         self._parent = parent
         self._simparent =  getattr(self._parent, 'sim_parent', self._parent)
         if not self._simparent: self._simparent = self._parent
+
         value_type_list = list(value_type)
         value_type_list.append(type(None))
         self.value_type = tuple(value_type_list)
@@ -95,17 +101,27 @@ class sim_value():
         self.set = self._set # Überschreibbar durch callback funktion
         self.call_extern = None
         self.call_intern = None
-        self._fullname = self._get_fullname()
+        self._fullname = ''
+        self._get_fullname()
+        
         self._loggerlist : set = set()
         
 
+   
     def _get_fullname(self):
         namelist = []
         if not self._simparent == self._parent:
-            namelist.append(self._simparent.name)
-        namelist.append(self._parent.name)
-        namelist.append(self.name)
-        return '.'.join(namelist)
+            namelist.append(self._simparent.alias_name)
+        namelist.append(self._parent.alias_name)
+        namelist.append(self.alias_name)
+        self._fullname =  '.'.join(namelist)
+        return self._fullname
+
+
+    def _changename_logger(self, oldname : str, new_name : str):
+       for logger in self._loggerlist:
+           logger.update_buffer(oldname, new_name)
+
 
     #TODO typen überprüfen
     def _set(self,  value):
@@ -113,12 +129,11 @@ class sim_value():
         self._value = value
         return self._value
 
-    # Wird geändert über value erfolgt kein callback zugriff es wird nur
-    #_value geändert oder zurückgegeben
-    @property
-    def value(self):
-        return self._value
+    
 
+    @property
+    def value(self): return self._value
+       
 
     @value.setter
     def value(self, value):
@@ -144,6 +159,12 @@ class sim_value():
             self._value = self.call_intern(value, stepper) 
         return self._value
 
+
+    def Option(self, alias_name = ''):
+        if alias_name:
+            self.alias_name = alias_name
+            self._get_fullname()
+            
 
    
     #TODO Warum Any würde hier nicht auch ein None genügen?
@@ -185,21 +206,37 @@ class sim_value():
 
 #-------------------------------------------------------------------
 class gate_base:
-    def __init__(self, name, sim_parent):
+    def __init__(self, name, sim_parent, alias_name = '' ):
         self.name = name
+        if alias_name:
+            self.alias_name = alias_name 
+        else: self.alias_name = self.name 
+        
         self.sim_parent = sim_parent
         self._success_flag : bool = True
-       
+
+
     def set(self, value: Any, value_name: str = ''):pass
-        
+
+
     def get(self, value_name: str = ''):pass
-        
+
+
     def Init(self, values):pass
-        
+
+
+    def Option(self, alias_name = ''):
+        if alias_name:
+            self.alias_name = alias_name
+            self.sim_parent._sync_fullname()
+             
+            
+
     def _reset(self): 
         self._success_flag : bool = True
 
     def _node_success(self, stepper): pass
+
 
     def log_all(self, logger):
         name_list = []
@@ -360,76 +397,178 @@ class gate_dataframe(gate_base):
         self._success_flag = False
 
 
-class gui_api():
-    def __init__(self):
-        self._GUI_visible = True
-        self._GUI_itemlist : dict = dict()
-        self.GUI_Item =  None
-        self._GUI_is_visible = False
-        self.info = widgets.Output()
 
+class nowo_base():
+    def __init__(self, name : str, 
+        init_methode :  str = 'normal',  
+        alias_name = ''):
+
+        self.name = name
+        if alias_name:
+            self.alias_name = alias_name 
+        else: self.alias_name = self.name 
+       
+        self._init_methode = self._set_init_methode(init_methode) 
+        self._init_para : dict = dict()
+        self._options = dict()
+        
+        self._gui_name_visible = False
+        self._GUI_is_visible = False # Warum ?
+        self._GUI_is_create = False 
+
+        self._GUI_itemlist : dict = dict()
+        self.info = widgets.Output()# Dient m Debugen
+        #display(self.info)
+        self.total_box = widgets.VBox(
+            layout = widgets.Layout()
+        )
+       
+
+
+    def on_click(self, change):  
+        self.alias_name =  self.name_widget.value 
+        self._sync_fullname() 
+      
+
+
+    def _set_init_methode(self, init_name):
+        if init_name == 'normal':
+            return  None 
+        elif init_name == 'gui':
+            return self.Init_By_GUI
+
+
+    def _sync_fullname(self):pass
+        
+
+    def Init(self, para_from_Init = dict()):
+        self._init_para = dict(para_from_Init)
+        self._init_para.pop('self')
+        self._init_para.pop('__class__')
+
+        if not self._init_methode:
+            self._init_methode = self.Init_By_Para
+       
+      
+
+    def Init_By_GUI(self):
+        #with self.info: print(' Init_By_GUI Parent') 
+        pass
+
+    def Init_By_Para(self):
+        #with self.info: print('Init_by_Para', self.name, self._init_para)
+        self.Init(**self._init_para)   
+
+
+    def Option(self, options = dict()):
+        self._options = options
+        if 'name' in options.keys():
+            # Option sichtbarkeit des Namens und die Möglichkeit des editierens
+            name_options = options['name']
+            if 'alias' in name_options.keys():
+                self.alias_name =  name_options['alias'] 
+                #self.name_widget.value = self.alias_name
+                self._sync_fullname() 
+            if 'visible' in name_options.keys():
+                self._gui_name_visible = name_options['visible']   
+               
 
     def Show_GUI(self):
-        if not self.GUI_Item:
-            self.GUI_Item =  self._create_gui()
+        if not self._GUI_is_create:
+            self._create_gui()
+        display(self.total_box)  
         self._GUI_is_visible = True
-        display(self.GUI_Item)
-            
+
+    def Box(self):
+        if not self._GUI_is_create:
+            self._create_gui()  
+        self._GUI_is_visible = True
+        return self.total_box
+
 
     def _create_gui(self):
-        for widget in self._GUI_itemlist.values():
-            setattr(widget, 'parent', self)
-        return None    
+        self._GUI_is_create = True
+        # Grundlegende Desings in den Boxen anlegen
+        style_box  = widgets.Layout(margin = '10px')
+        self.total_box.layout.margin = style_box.margin 
+        if not self._gui_name_visible: return 
+        
+        layout_name  = widgets.Layout(display = 'block')
+        style_valbox = widgets.Layout(padding = '1em 0  0  0')
+        self.name_widget = widgets.Text(
+            value=self.alias_name,
+            placeholder='Type something',
+            description='Name:',
+            disabled=False,
+            layout = layout_name)
+
+        self.change_button = widgets.Button(
+            description = 'Ändere',
+            button_style='danger')
+        self.change_button.on_click(self.on_click)
+        
+        self.name_box = widgets.VBox(
+            [self.name_widget, self.change_button],
+            layout = style_valbox)
+        self._GUI_itemlist.update({
+            'changename_button' : self.change_button,
+            'alias_name' : self.name_widget})
+
+        self.total_box.children = (self.name_box,)
+       
 
 
 #*****************************************************************
-class step_base(gui_api):
-    def __init__(self, name : str,  GUI : bool = False):
-        super().__init__()
-        self.name = name
+class step_base(nowo_base):
+    def __init__(self, name : str, init_methode :  str = 'normal'):
+        super().__init__(name, init_methode)
         self.step_nr: int = 0
         self.total_steps: int = 0
         self.work_objs = [ ] # Diese Objekte sind mit dem Timer verknüpft
         self.sim_funcs : dict = {}# Ersetzt self.work_objs und self.work_funcs
         self._loggerlist : set = set() 
         
-        # self._GUI_visible = GUI
-        # self._GUI_itemlist : dict = dict()
-        # self.GUI_Item =  self._create_gui()
-        # self._GUI_is_visible = False
-
-        # self.info = widgets.Output()
-
-
-
-    def on_start_clicked(self, args):
-        parent = args.parent
-        parent.reset()
-        parent.work()
       
-
-    # def Show_GUI(self, show = True):
-    #     for obj in self.work_objs:
-    #         if obj._GUI_visible:
-    #             obj.Show_GUI()
-    #     super().Show_GUI()
-        # if self.GUI_Item:
-        #     self._GUI_is_visible = True
-        #     display(self.GUI_Item)
-            
-
-    # def _create_gui(self):
-    #     for widget in self._GUI_itemlist.values():
-    #         setattr(widget, 'parent', self)
-    #     return None
+    def on_start_clicked(self, args):  
+        #with self.info: print('on_start_clicked' , self.name) 
+        self.work()
+    
      
+    def _create_gui(self):
+        start_button = widgets.Button(
+            description='Berechne',
+            button_style='danger'
+        )
+        start_label = widgets.Label(value='Starte eine Berechnung')  
+        start_button.on_click(self.on_start_clicked)
+        #self.total_box = widgets.HBox([start_label, start_button])
+        self.total_box = widgets.HBox([start_button])
+        self._GUI_itemlist.update({
+            'start_button' : start_button,
+            'start_label' : start_label
+        })
+      
+        super()._create_gui()# Attention! --must-- because the widget get a parent attr.
+        return
+       
 
     def reset(self):
         self.step_nr = 0
-        
+        for obj in self.work_objs:
+            #obj._create_gui()
+            obj._init_methode()
+            obj.ready_for_start(self)
+            
+        for logger in self._loggerlist:
+            #logger._create_gui()
+            logger._init_methode() 
+            logger.ready_for_start(self)
+           
 
 
-    def Init(self, work_objs : list = []):
+
+    def Init(self, para_from_Init = dict(), work_objs : list = []):
+        super().Init(para_from_Init = para_from_Init)
         self.step_nr = 0
         if not work_objs: raise Exception(f'obj : {self.name} |wenigstens eine start Methode muss angeben werden!')
         self.work_objs = [] # Diese Objekte sind mit dem Timer verknüpft
@@ -446,20 +585,19 @@ class step_base(gui_api):
                 {func_info[1] : {
                     'obj' : func_info[0],
                     'gate' : gate}})
- 
+        
+        for obj in self.work_objs:
+            obj._set_stepper(self)
+            
+        for logger in self._loggerlist:
+            logger._set_stepper(self)
+           
+
 
     def work(self):
-        for obj in self.work_objs:
-            if obj._GUI_is_visible:
-                obj.Init_Over_GUI()
-
-        for obj in self.work_objs:
-            obj.ready_for_start(self)
-        for logger in self._loggerlist:
-            logger.ready_for_start(self)
-
-        if self._GUI_visible: pass 
-        #with self.info: print(logger.name, 'work 1')
+        self.reset()
+        
+       
         while self.step() == 1:
             self._node_success()
             
@@ -467,9 +605,10 @@ class step_base(gui_api):
             obj.ready_for_end()
 
         for logger in self._loggerlist:
-            #with self.info: print(logger.name, 'work 2')
+            #with self.info: print('work 3', logger.ready_for_end)
             logger.ready_for_end()
          
+
 
     def step(self):
         for obj in self.work_objs:
@@ -496,9 +635,10 @@ class step_base(gui_api):
     def _node_success(self): pass 
 
 
+
 class step_range(step_base):
-    def __init__(self, name : str,  GUI : bool = False):
-        super().__init__(name, GUI)
+    def __init__(self, name : str,  init_methode :  str = 'normal'):
+        super().__init__(name, init_methode)
         self.total_steps = sim_value('total_steps', self, (float, int,)) 
         self.Gate_Step: gate_general = gate_general( 'Gate_Step', self)
 
@@ -543,30 +683,19 @@ class step_range(step_base):
         self.Gate_Step._node_success(self)
 
 
-
 class step_single(step_base):
-    def __init__(self, name : str,  GUI : bool = False):
-        super().__init__(name, GUI)
+    def __init__(self, name : str, init_methode :  str = 'normal'):
+        super().__init__(name)
         
         
-    def Init(self,  work_objs : list = []):
-        super().Init(work_objs=work_objs)
+    def Init(self,  
+        work_objs : list = []):
+        
+        super().Init(
+            work_objs=work_objs,
+            para_from_Init = locals())
         self.step_nr = 0
 
-
-    # Später im Parent
-    def _create_gui(self):
-        start_button = widgets.Button(description='Calc')  
-        start_button.on_click(self.on_start_clicked)
-        total_box = widgets.VBox([start_button])
-
-        self._GUI_itemlist.update({
-            'start_button' : start_button
-        })
-      
-        super()._create_gui()# Attention! --must-- because the widget get a parent attr.
-        return  total_box
-     
 
     def step(self):
         if self.step_nr < 1:
@@ -577,8 +706,8 @@ class step_single(step_base):
 
 # ------------------------------------------------------------------
 class step_timer(step_base):
-    def __init__(self, name : str,  GUI : bool = False):
-        super().__init__(name, GUI)
+    def __init__(self, name : str, init_methode :  str = 'normal'):
+        super().__init__(name, init_methode)
 
         self.abs_start = dt.datetime(1, 1, 1, 0, 0, 0)
         self.start: dt.datetime = dt.datetime(1, 1, 1, 0, 0, 0)
@@ -648,23 +777,33 @@ class step_timer(step_base):
 
 
 #*****************************************************************
-class work_base(gui_api):
-    def __init__(self, name: str, GUI : bool = False, **kwargs):
-        super().__init__()
-        self.name = name
+class work_base(nowo_base):
+    def __init__(self, name: str, init_methode :  str = 'normal', **kwargs):
+        super().__init__(name, init_methode)
         self._ctrl_ok : bool = False
+        self._stepper : step_base = None
    
-    def Init(self): pass
+    def _set_stepper(self, stepper):
+        if isinstance(stepper, step_base):
+            self._stepper = stepper   
+
+    def Init(self, para_from_Init = dict(),): 
+        super().Init(para_from_Init =  para_from_Init)
        
     def ready_for_start(self, stepper: step_base): pass
        
     def ready_for_end(self):pass
 
+    def Option(self, options = dict()):
+        super().Option(options)
 
+    def _sync_fullname(self):pass
+        #self._stepper.reset()
 
+#*****************************************************************
 class gui_base(work_base):
-    def __init__(self, name: str, GUI : bool = False,  **kwargs):
-        super().__init__(name, GUI, **kwargs)
+    def __init__(self, name: str, init_methode :  str = 'normal',  **kwargs):
+        super().__init__(name, init_methode,  **kwargs)
           
     def Init_by_dataframe(self, dataframe): pass
 
@@ -672,8 +811,8 @@ class gui_base(work_base):
 
 # ------------------------------------------------------------------
 class port_base(work_base):
-    def __init__(self, name: str, GUI : bool = False,  **kwargs):
-        super().__init__(name, GUI, **kwargs)
+    def __init__(self, name: str, init_methode :  str = 'normal',  **kwargs):
+        super().__init__(name ,init_methode, **kwargs)
         self.buffer_data: dict = dict()
         self.col_name : list = list()
         self.Gui_For_Data : gui_base = None
@@ -684,12 +823,16 @@ class port_base(work_base):
             self.buffer_data[key] = []
 
 
+    def update_buffer(self, oldname : str, new_name : str): 
+        if oldname in self.buffer_data.keys():
+            self.buffer_data[new_name] = self.buffer_data.pop(oldname)
+              
+
     def ready_for_start(self, stepper: step_base):
         self.clear_buffer()
 
 
     def ready_for_end(self):pass
-        
         #with self.info:
         #    print('ready_for_end')
 
@@ -699,11 +842,12 @@ class port_base(work_base):
             self.ports[port_parentname] = dict()
 
 
-    def Init(self,  
+    def Init(self, 
+            para_from_Init = dict(), 
             Values = [],
             Gui_For_Data  = None,
         ):
-        super().Init()
+        super().Init(para_from_Init = para_from_Init)
         self.Gui_For_Data = Gui_For_Data
         self.buffer_data: dict = dict()
         for value in Values:
@@ -724,8 +868,8 @@ class port_base(work_base):
 # -------------------------------------------------------------------
 class sim_base(work_base):
 
-    def __init__(self, name: str, GUI : bool = False,  **kwargs):
-        super().__init__(name, GUI, **kwargs)
+    def __init__(self, name: str, init_methode :  str = 'normal',  **kwargs):
+        super().__init__(name, init_methode, **kwargs)
         self.time_factor: float = 0.0
         self.ch_type: gate_base = None
         
@@ -780,7 +924,9 @@ class sim_base(work_base):
 
 
         
-    def Init_Over_GUI(self): pass
+    def Init_By_GUI(self):
+        super().Init_By_GUI()
+        pass
        
        
       
@@ -892,9 +1038,9 @@ class ctrl_general_step(ctrl_base):
 
 #*****************************************************************
 class sim_dynamic(sim_base):
-    def __init__(self, name: str, GUI : bool = False,  **kwargs):
+    def __init__(self, name: str, init_methode :  str = 'normal',  **kwargs):
         kwargs.update({'ch_type' : gate_general}) 
-        super().__init__(name, GUI, **kwargs)
+        super().__init__(name, init_methode, **kwargs)
         
         self.Gate_Dynamic = gate_dynamic('Gate_Dynamic', self)
         self.Feature : dict = None
@@ -924,9 +1070,9 @@ class sim_dynamic(sim_base):
 
 #--------------------------------------------------------------------  
 class sim_general_node(sim_base):
-    def __init__(self, name: str, GUI : bool = False,  **kwargs):
+    def __init__(self, name: str, init_methode :  str = 'normal',  **kwargs):
         kwargs.update({'ch_type' : gate_general}) 
-        super().__init__(name, GUI, **kwargs)   
+        super().__init__(name, init_methode, **kwargs)   
         
         self._iterat_counter : int = 0
         self.Max_Iterat = sim_value('Max_Iterat', self, (int,)) 
@@ -1177,9 +1323,9 @@ class sim_general_node(sim_base):
 
 
 class sim_general_chanal(sim_base):
-    def __init__(self, name: str, GUI : bool = False,  **kwargs):
+    def __init__(self, name: str, init_methode :  str = 'normal',  **kwargs):
         kwargs.update({'ch_type' : gate_general}) 
-        super().__init__(name, GUI, **kwargs)
+        super().__init__(name, init_methode, **kwargs)
         
         self.Gate_Set = gate_general('Gate_Set', self)
         self.Gate_Get = gate_general('Gate_Get', self)
@@ -1266,9 +1412,9 @@ class sim_general_user(sim_base):
 #TODO absolute zeit bezogen auf s einführen
 #TODO verschiedene Formen auswählen
 class sim_general_signal(sim_base):
-    def __init__(self, name: str, GUI : bool = False,  **kwargs):
+    def __init__(self, name: str, init_methode :  str = 'normal',  **kwargs):
         kwargs.update({'ch_type' : gate_general}) 
-        super().__init__(name, GUI, **kwargs)
+        super().__init__(name, init_methode, **kwargs)
         
         self.Gate_Signal = gate_general('Gate_Signal', self)
         
@@ -1319,9 +1465,9 @@ class sim_general_signal(sim_base):
 
 #--------------------------------------------------------------------
 class sim_general_joker(sim_base):
-    def __init__(self, name: str, GUI : bool = False,  **kwargs):
+    def __init__(self, name: str, init_methode :  str = 'normal',  **kwargs):
         kwargs.update({'ch_type' : gate_general}) 
-        super().__init__(name, GUI, **kwargs)
+        super().__init__(name, init_methode, **kwargs)
       
 
     def Init(self,
@@ -1346,9 +1492,9 @@ class sim_general_joker(sim_base):
 #TODO ch_type raus
 #--------------------------------------------------------------------
 class sim_general_store(sim_base):
-    def __init__(self, name: str, GUI : bool = False,  **kwargs):
+    def __init__(self, name: str, init_methode :  str = 'normal',  **kwargs):
         kwargs.update({'ch_type' : gate_general}) 
-        super().__init__(name, GUI, **kwargs)
+        super().__init__(name, init_methode, **kwargs)
         
         self.Gate_Store = gate_general('Gate_Store', self)
         self.Gate_Leak = gate_general('Gate_Leak', self)
