@@ -1,15 +1,15 @@
-# Binäre Bilanz (Testversion)
-Informationen über die Berechnung eines binären Bilanzraumes (Knoten), sowie eine kleine interaktive App zur stellen Berechnung.
+# Massen Bilanzmodell --Kristallisation--
+Darstellung und Berechnung eines Massen-Bilanzmodells.
 
 
 
 
-<img src="pics/binary_balance_1.jpg" alt="My picture"
-	title="A cute kitten" width="400px" />
+<img src="pics/Knotenmodell_Kristallisation_Vers_1.svg" alt="Bilanzmodell Kristallisation"
+	title="Bilanzmodell Kristallisation" width="400px" />
 
-Dieses Bild zeigt den Bilanzknoten mit den  extensiven und intensiven Größen
+Das Bild zeigt ein einfaches Bilanzkoten-Modell einer Kristallisation.
 
-##### Der folgende  Link startet eine mit Voila-Gridstack gerenderte Version.
+##### Der folgende  Link startet eine mit Voila gerenderte Version.
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/was-ist-immer/Binary_Balance/HEAD?urlpath=voila%2Frender%2FBalance_Binary.ipynb)
 
 ##### Der folgende  Link startet Jupyterlab auf Binder um das Programm temporär zu verändern (programmieren).
