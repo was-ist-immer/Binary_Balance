@@ -73,10 +73,16 @@ class binary_node(nowo.sim_base):
             (self.B_portion.alias_name, 'B_portion'),
             ]
 
+        # self.total_box = widgets.HBox(
+        #     layout = widgets.Layout()
+        # )
+       
+
 
         layout_select = widgets.Layout()
         layout_valbox = widgets.Layout(padding = '1em 0  0  0')
         style_label = widgets.Layout(width = '100px')
+        style_values = widgets.Layout(width = '100px')
 
         val_label_1 = widgets.HTML(
             value='extensive Größe:',
@@ -85,10 +91,13 @@ class binary_node(nowo.sim_base):
 
         val_select_1 = widgets.Dropdown(options = options[:3], 
             value='A',  
-            layout = layout_select
+            layout = style_values
         )
 
-        value_1 = widgets.FloatText(value = 1.0)
+        value_1 = widgets.FloatText(
+            value = 1.0,
+             layout = style_values
+             )
         val1_box = widgets.HBox([val_label_1, widgets.VBox([val_select_1, value_1])])
 
 
@@ -98,8 +107,12 @@ class binary_node(nowo.sim_base):
         )
         val_select_2 = widgets.Dropdown(options = options, 
             value='B', 
-            layout = layout_select) 
-        value_2 = widgets.FloatText(value = 1.0)    
+            layout = style_label
+        ) 
+        value_2 = widgets.FloatText(
+            value = 1.0,
+            layout = style_values
+        )    
         
        
         val2_box = widgets.HBox([val_label_2, widgets.VBox([val_select_2, value_2])], layout = layout_valbox)
@@ -113,7 +126,7 @@ class binary_node(nowo.sim_base):
         super()._create_gui()# Attention! --must-- because the widget get a parent attr.
         
         self.total_box.children = (val1_box, val2_box, *self.total_box.children)
-        self.total_box.layout.width = '60%'
+        #self.total_box.layout.width = '300px'
      
 
 

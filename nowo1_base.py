@@ -493,14 +493,16 @@ class nowo_base():
         self.total_box.layout.margin = style_box.margin 
         if not self._gui_name_visible: return 
         
-        layout_name  = widgets.Layout(display = 'block')
+        style_name  = widgets.Layout(
+            #display = 'block'
+            width = '150px'
+            )
         style_valbox = widgets.Layout(padding = '1em 0  0  0')
         self.name_widget = widgets.Text(
             value=self.alias_name,
             placeholder='Type something',
-            description='Name:',
             disabled=False,
-            layout = layout_name)
+            layout = style_name)
 
         self.change_button = widgets.Button(
             description = 'Ändere',
