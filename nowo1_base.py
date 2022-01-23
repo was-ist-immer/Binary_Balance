@@ -489,7 +489,9 @@ class nowo_base():
     def _create_gui(self):
         self._GUI_is_create = True
         # Grundlegende Desings in den Boxen anlegen
-        style_box  = widgets.Layout(margin = '10px')
+        style_box  = widgets.Layout(
+            margin = '10px',
+            border='solid 2px')
         self.total_box.layout.margin = style_box.margin 
         if not self._gui_name_visible: return 
         
