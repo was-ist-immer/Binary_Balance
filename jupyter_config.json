@@ -1,5 +1,6 @@
 {
     "VoilaConfiguration": {
-      "theme": "light"
+      "theme": "light", 
+      "enable_nbextensions": true
     }
 }
