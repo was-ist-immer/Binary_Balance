@@ -108,7 +108,7 @@ class log_sheet(nowo.port_base):
             self.sheet_data.at[split_name[1], col_name] = value[0]
             self.full_data.at[split_name[1], col_name] = value
         
-        csv_text = self.sheet_data.to_csv(sep = ';')
+        csv_text = self.sheet_data.to_csv(sep = ';', decimal = ',')
         self._download_class.set_button(csv_text)
         if self.Gui_For_Data:
             self.Gui_For_Data.ready_for_end()
